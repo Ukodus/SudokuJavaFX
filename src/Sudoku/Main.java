@@ -16,6 +16,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -41,12 +42,13 @@ public class Main extends Application {
 
         // main SplitPain (horizontal) that will go in the BorderPane center section
         SplitPane mainSplit = new SplitPane();
-        ResizableCanvas canvas = new ResizableCanvas();
-        CanvasPane redPane = new CanvasPane(canvas);
-        redPane.setStyle("-fx-background-color: #AA0000;");
+        BoardCanvas canvas = new BoardCanvas();
+        ResizableCanvasPane redPane = new ResizableCanvasPane(canvas);
+        redPane.setStyle("-fx-background-color: #FFFFFF;");
         canvas.widthProperty().bind(redPane.widthProperty());
         canvas.heightProperty().bind(redPane.heightProperty());
         mainSplit.getItems().addAll(redPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
+        mainSplit.setDividerPosition(0, .65);
 
         // buttons for toolbar
         CheckBox checkboxGreen = new CheckBox("Green");
@@ -84,14 +86,15 @@ public class Main extends Application {
         });
 
         primaryStage.setTitle("Three Section Form");
-        primaryStage.setScene(new Scene(borderPane, 600, 450));
+        primaryStage.setScene(new Scene(borderPane, 1440, 940));
         primaryStage.show();
     }
+
 
     class ResizableCanvas extends Canvas {
 
         public ResizableCanvas() {
-            // Redraw canvas when size changes.
+            // Call the draw() method anytime a resize event occurs.
             widthProperty().addListener(evt -> draw());
             heightProperty().addListener(evt -> draw());
         }
@@ -111,41 +114,106 @@ public class Main extends Application {
         public boolean isResizable() {
             return true;
         }
-        /*
+
         @Override
         public double prefWidth(double height) { return getWidth(); }
 
         @Override
-        public double prefHeight(double width) {
-            return getHeight();
-        }
-        */
+        public double prefHeight(double width) { return getHeight(); }
     }
 
-    public class CanvasPane extends Pane{
+
+    public class ResizableCanvasPane extends Pane{
 
         private ResizableCanvas canvas;
 
-        public CanvasPane(ResizableCanvas canvas){
+        public ResizableCanvasPane(ResizableCanvas canvas){
             this.canvas = canvas;
             this.getChildren().add(canvas);
         }
 
         @Override
         protected void layoutChildren() {
-            final int top = (int)snappedTopInset();
-            final int right = (int)snappedRightInset();
+            final int top    = (int)snappedTopInset();
+            final int left   = (int)snappedLeftInset();
             final int bottom = (int)snappedBottomInset();
-            final int left = (int)snappedLeftInset();
-            final int w = (int)getWidth() - left - right;
-            final int h = (int)getHeight() - top - bottom;
+            final int right  = (int)snappedRightInset();
+            final int width  = (int)getWidth() - left - right;
+            final int height = (int)getHeight() - top - bottom;
             canvas.setLayoutX(left);
             canvas.setLayoutY(top);
-            if (w != canvas.getWidth() || h != canvas.getHeight()) {
-                canvas.setWidth(w);
-                canvas.setHeight(h);
+            if (width != canvas.getWidth() || height != canvas.getHeight()) {
+                canvas.setWidth(width);
+                canvas.setHeight(height);
                 canvas.draw();
             }
+        }
+    }
+
+
+    class BoardCanvas extends ResizableCanvas{
+
+        public BoardCanvas() {
+            // Call the draw() method anytime a resize event occurs.
+            widthProperty().addListener(evt -> draw());
+            heightProperty().addListener(evt -> draw());
+        }
+
+        private void draw() {
+            double boardWidth  = getWidth();
+            double boardHeight = getHeight();
+            double boxWidth    = boardWidth / 3.0;
+            double boxHeight   = boardHeight / 3.0;
+            double cellWidth   = boxWidth / 3.0;
+            double cellHeight  = boxHeight / 3.0;
+
+            Color lightColor = Color.ANTIQUEWHITE;
+            Color darkColor  = Color.LIGHTGREY;
+            Color lineColor  = Color.BLACK;
+
+            GraphicsContext gc = getGraphicsContext2D();
+            gc.setFill( lightColor );
+            gc.fillRect(0,0, boardWidth, boardHeight);
+
+            gc.setFill( darkColor );
+            gc.fillRect( boxWidth, 0.0, boxWidth, boxHeight);
+            gc.fillRect( boxWidth, boxHeight+boxHeight, boxWidth, boxHeight);
+            gc.fillRect( 0, boxHeight, boxWidth, boxHeight);
+            gc.fillRect( boxWidth+boxWidth, boxHeight, boxWidth, boxHeight);
+
+            gc.setLineWidth(2.0);
+            gc.setStroke(lineColor);
+            gc.strokeLine(boxWidth, 0, boxWidth, boardHeight);
+            gc.strokeLine(boxWidth+boxWidth, 0, boxWidth+boxWidth, boardHeight);
+            gc.strokeLine(0, boxHeight, boardWidth, boxHeight);
+            gc.strokeLine(0, boxHeight+boxHeight, boardWidth, boxHeight+boxHeight);
+
+            double x = cellWidth;
+            gc.setLineWidth(1.0);
+            gc.strokeLine(x, 0, x, boardHeight);
+            x += cellWidth;
+            gc.strokeLine(x, 0, x, boardHeight);
+            x += cellWidth + cellWidth;
+            gc.strokeLine(x, 0, x, boardHeight);
+            x += cellWidth;
+            gc.strokeLine(x, 0, x, boardHeight);
+            x += cellWidth + cellWidth;
+            gc.strokeLine(x, 0, x, boardHeight);
+            x += cellWidth;
+            gc.strokeLine(x, 0, x, boardHeight);
+
+            double y = cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
+            y += cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
+            y += cellHeight + cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
+            y += cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
+            y += cellHeight + cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
+            y += cellHeight;
+            gc.strokeLine(0, y, boardWidth, y);
         }
     }
 
