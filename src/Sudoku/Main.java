@@ -1,7 +1,6 @@
 package Sudoku;
 
 import javafx.application.Application;
-import javafx.scene.input.MouseEvent;
 import javafx.beans.value.ChangeListener;       // for ChangeListener
 import javafx.beans.value.ObservableValue;      // for ChangeListener
 import javafx.event.EventHandler;
@@ -12,17 +11,25 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class Main extends Application {
 
+    private Stage     mainStage;
+    private SplitPane nestedSplit;
+    private SplitPane mainSplit;
+    private StackPane listPane;
+    private StackPane infoPane;
+    private ResizableCanvasPane boardPane;
+
     private double dividerPos;   // retains divider position when green panel toggled off
+    private int paneLayout = 2;
 
     public static void main(String[] args) {
         launch(args);
@@ -31,24 +38,10 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
 
-        // nested SplitPane that will go in the main SplitPane
-        SplitPane nestedSplit = new SplitPane();
-        nestedSplit.setOrientation(Orientation.VERTICAL);
-        StackPane bluePane = new StackPane();
-        bluePane.setStyle("-fx-background-color: blue;");
-        StackPane greenPane = new StackPane();
-        greenPane.setStyle("-fx-background-color: green;");
-        nestedSplit.getItems().addAll(bluePane, greenPane);
+        mainStage = primaryStage;
 
-        // main SplitPain (horizontal) that will go in the BorderPane center section
-        SplitPane mainSplit = new SplitPane();
-        BoardCanvas canvas = new BoardCanvas();
-        ResizableCanvasPane redPane = new ResizableCanvasPane(canvas);
-        redPane.setStyle("-fx-background-color: #FFFFFF;");
-        canvas.widthProperty().bind(redPane.widthProperty());
-        canvas.heightProperty().bind(redPane.heightProperty());
-        mainSplit.getItems().addAll(redPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
-        mainSplit.setDividerPosition(0, .65);
+        LayoutPanes();
+
 
         // buttons for toolbar
         CheckBox checkboxGreen = new CheckBox("Green");
@@ -56,15 +49,15 @@ public class Main extends Application {
         checkboxGreen.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if(newValue) {
-                    nestedSplit.getItems().add(greenPane);
-                    nestedSplit.setDividerPosition(0, dividerPos);
+                if (paneLayout == 1 || paneLayout == 2) {
+                    if (newValue) {
+                        nestedSplit.getItems().add(infoPane);
+                        nestedSplit.setDividerPosition(0, dividerPos);
+                    } else {
+                        dividerPos = nestedSplit.getDividerPositions()[0];
+                        nestedSplit.getItems().remove(infoPane);
+                    }
                 }
-                else {
-                    dividerPos = nestedSplit.getDividerPositions()[0];
-                    nestedSplit.getItems().remove(greenPane);
-                }
-
             }
         });
 
@@ -85,9 +78,49 @@ public class Main extends Application {
             }
         });
 
-        primaryStage.setTitle("Three Section Form");
-        primaryStage.setScene(new Scene(borderPane, 1440, 940));
-        primaryStage.show();
+        double width  = (paneLayout == 1 ? 1440.0 : 1300.0);
+        double height = (paneLayout == 1 ?  940.0 : 1200.0);
+        mainStage.setTitle("Sudoku");
+        mainStage.setScene(new Scene(borderPane, width, height));
+        mainStage.show();
+    }
+
+    public void LayoutPanes() {
+
+        listPane = new StackPane();
+        listPane.setStyle("-fx-background-color: blue;");
+
+        infoPane = new StackPane();
+        infoPane.setStyle("-fx-background-color: green;");
+
+        BoardCanvas canvas = new BoardCanvas();
+        boardPane = new ResizableCanvasPane(canvas);
+        boardPane.setStyle("-fx-background-color: #FFFFFF;");
+        canvas.widthProperty().bind(boardPane.widthProperty());
+        canvas.heightProperty().bind(boardPane.heightProperty());
+
+        if(paneLayout == 1) {
+            // nested SplitPane that will go in the main SplitPane
+            nestedSplit = new SplitPane();
+            nestedSplit.setOrientation(Orientation.VERTICAL);
+            nestedSplit.getItems().addAll(listPane, infoPane);
+
+            // main SplitPain (horizontal) that will go in the BorderPane center section
+            mainSplit = new SplitPane();
+            mainSplit.getItems().addAll(boardPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
+            mainSplit.setDividerPosition(0, .65);
+        }
+        else if(paneLayout == 2){
+            nestedSplit = new SplitPane();
+            nestedSplit.setOrientation(Orientation.HORIZONTAL);
+            nestedSplit.getItems().addAll(boardPane, infoPane);
+            nestedSplit.setDividerPosition(0, .75);
+
+            mainSplit = new SplitPane();
+            nestedSplit.setOrientation(Orientation.VERTICAL);
+            mainSplit.getItems().addAll(nestedSplit, listPane);
+            mainSplit.setDividerPosition(0, .75);
+        }
     }
 
 
