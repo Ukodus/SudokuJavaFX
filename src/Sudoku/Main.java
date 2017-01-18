@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;       // for ChangeListener
 import javafx.beans.value.ObservableValue;      // for ChangeListener
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.CheckBox;
@@ -17,6 +18,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class Main extends Application {
@@ -29,7 +31,7 @@ public class Main extends Application {
     private ResizableCanvasPane boardPane;
 
     private double dividerPos;   // retains divider position when green panel toggled off
-    private int paneLayout = 2;
+    private int paneLayout = 3;
 
     public static void main(String[] args) {
         launch(args);
@@ -41,7 +43,6 @@ public class Main extends Application {
         mainStage = primaryStage;
 
         LayoutPanes();
-
 
         // buttons for toolbar
         CheckBox checkboxGreen = new CheckBox("Green");
@@ -56,6 +57,15 @@ public class Main extends Application {
                     } else {
                         dividerPos = nestedSplit.getDividerPositions()[0];
                         nestedSplit.getItems().remove(infoPane);
+                    }
+                }
+                else {
+                    if (newValue) {
+                        mainSplit.getItems().add(infoPane);
+                        mainSplit.setDividerPosition(0, dividerPos);
+                    } else {
+                        dividerPos = mainSplit.getDividerPositions()[0];
+                        mainSplit.getItems().remove(infoPane);
                     }
                 }
             }
@@ -78,12 +88,24 @@ public class Main extends Application {
             }
         });
 
-        double width  = (paneLayout == 1 ? 1440.0 : 1300.0);
-        double height = (paneLayout == 1 ?  940.0 : 1200.0);
+        // Given the layout and screen size, we specify a starting size that has approx square cells.
+        // MacBook Pro w Retina is 2880x1800 yet command below yields 1440x900... exactly half.
+        // Note:   JavaFX 8 introduces automatic coordinate scaling for Mac "Retina" HiDPI mode.
+        //         Because retina displays are twice the resolution of non-retina, a scale factor of 2 is used.
+        double height = Screen.getPrimary().getBounds().getMaxY() * .80; // initial Scene height is 80% of max
+        double width  = height;  // Make the cells ~square based on initial divider positions.
+        switch (paneLayout) {    // Note: JavaFX treats the aspect ratio == 1 so we don't need to worry about that.
+            case 1: width *= (1.0 / mainSplit.getDividerPositions()[0]); break;
+            case 2: width *= (nestedSplit.getDividerPositions()[0] / mainSplit.getDividerPositions()[0]); break;
+            case 3: width *= (mainSplit.getDividerPositions()[0] / nestedSplit.getDividerPositions()[0]); break;
+        }
+
+        // Show the main Stage
         mainStage.setTitle("Sudoku");
         mainStage.setScene(new Scene(borderPane, width, height));
         mainStage.show();
     }
+
 
     public void LayoutPanes() {
 
@@ -104,23 +126,37 @@ public class Main extends Application {
             nestedSplit = new SplitPane();
             nestedSplit.setOrientation(Orientation.VERTICAL);
             nestedSplit.getItems().addAll(listPane, infoPane);
+            nestedSplit.setDividerPosition(0,.50);
 
             // main SplitPain (horizontal) that will go in the BorderPane center section
             mainSplit = new SplitPane();
+            mainSplit.setOrientation(Orientation.HORIZONTAL);
             mainSplit.getItems().addAll(boardPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
-            mainSplit.setDividerPosition(0, .65);
+            mainSplit.setDividerPosition(0, .667);
         }
         else if(paneLayout == 2){
             nestedSplit = new SplitPane();
-            nestedSplit.setOrientation(Orientation.HORIZONTAL);
+            nestedSplit.setOrientation(Orientation.VERTICAL);
             nestedSplit.getItems().addAll(boardPane, infoPane);
-            nestedSplit.setDividerPosition(0, .75);
+            nestedSplit.setDividerPosition(0, .85);
 
             mainSplit = new SplitPane();
-            nestedSplit.setOrientation(Orientation.VERTICAL);
+            mainSplit.setOrientation(Orientation.HORIZONTAL);
             mainSplit.getItems().addAll(nestedSplit, listPane);
             mainSplit.setDividerPosition(0, .75);
         }
+        else if(paneLayout == 3){
+            nestedSplit = new SplitPane();
+            nestedSplit.setOrientation(Orientation.HORIZONTAL);
+            nestedSplit.getItems().addAll(boardPane, listPane);
+            nestedSplit.setDividerPosition(0, .75);
+
+            mainSplit = new SplitPane();
+            mainSplit.setOrientation(Orientation.VERTICAL);
+            mainSplit.getItems().addAll(nestedSplit, infoPane);
+            mainSplit.setDividerPosition(0, .85);
+        }
+
     }
 
 
