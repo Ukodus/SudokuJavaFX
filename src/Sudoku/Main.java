@@ -3,11 +3,12 @@ package Sudoku;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;       // for ChangeListener
 import javafx.beans.value.ObservableValue;      // for ChangeListener
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
@@ -21,17 +22,21 @@ import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
+
 public class Main extends Application {
 
-    private Stage     mainStage;
-    private SplitPane nestedSplit;
-    private SplitPane mainSplit;
-    private StackPane listPane;
-    private StackPane infoPane;
+    private Stage      mainStage;
+    private Scene      mainScene;
+    private BorderPane borderPane;
+    private SplitPane  nestedSplit;
+    private SplitPane  mainSplit;
+    private StackPane  listPane;
+    private StackPane  infoPane;
     private ResizableCanvasPane boardPane;
 
-    private double dividerPos;   // retains divider position when green panel toggled off
+    private double dividerPos;   // retains divider position when infoPane toggled off
     private int paneLayout = 3;
+
 
     public static void main(String[] args) {
         launch(args);
@@ -39,10 +44,21 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        // one-time creation of panes
+        listPane = new StackPane();
+        listPane.setStyle("-fx-background-color: blue;");
 
-        mainStage = primaryStage;
+        infoPane = new StackPane();
+        infoPane.setStyle("-fx-background-color: green;");
 
-        LayoutPanes();
+        BoardCanvas canvas = new BoardCanvas();
+        boardPane = new ResizableCanvasPane(canvas);
+        boardPane.setStyle("-fx-background-color: #FFFFFF;");
+        canvas.widthProperty().bind(boardPane.widthProperty());
+        canvas.heightProperty().bind(boardPane.heightProperty());
+
+        mainSplit   = new SplitPane();
+        nestedSplit = new SplitPane();
 
         // buttons for toolbar
         CheckBox checkboxGreen = new CheckBox("Green");
@@ -71,11 +87,25 @@ public class Main extends Application {
             }
         });
 
+        // toggle layout button
+        Button layoutButton = new Button( "Layout" );
+        layoutButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent t) {
+                paneLayout += 1;
+                if (paneLayout > 3)
+                    paneLayout = 1;
+                System.out.println("Layout button clicked: " + paneLayout);
+                LayoutPanes();
+            }
+        });
+
         // create the BorderPane with a toolbar and statusbar
-        BorderPane borderPane = new BorderPane();
+        borderPane = new BorderPane();
         ToolBar toolbar = new ToolBar();
         toolbar.setPrefHeight(30.0);
-        toolbar.getItems().addAll(checkboxGreen);
+        toolbar.getItems().addAll(checkboxGreen, layoutButton);
         Label statusBar = new Label();
         borderPane.setTop(toolbar);
         borderPane.setCenter(mainSplit);
@@ -87,6 +117,50 @@ public class Main extends Application {
                 statusBar.setText("Event: " + e.getEventType() +  "  X: " + e.getX() + "  Y:" + e.getY());
             }
         });
+
+        mainStage = primaryStage;
+
+        LayoutPanes();
+
+    }
+
+
+    public void LayoutPanes() {
+        mainStage.hide();
+
+        if(paneLayout == 1) {
+            nestedSplit.setOrientation(Orientation.VERTICAL);
+            nestedSplit.getItems().clear();
+            nestedSplit.getItems().addAll(listPane, infoPane);
+            nestedSplit.setDividerPosition(0,.50);
+
+            mainSplit.setOrientation(Orientation.HORIZONTAL);
+            mainSplit.getItems().clear();
+            mainSplit.getItems().addAll(boardPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
+            mainSplit.setDividerPosition(0, .667);
+        }
+        else if(paneLayout == 2){
+            nestedSplit.setOrientation(Orientation.VERTICAL);
+            nestedSplit.getItems().clear();
+            nestedSplit.getItems().addAll(boardPane, infoPane);
+            nestedSplit.setDividerPosition(0, .85);
+
+            mainSplit.setOrientation(Orientation.HORIZONTAL);
+            mainSplit.getItems().clear();
+            mainSplit.getItems().addAll(nestedSplit, listPane);
+            mainSplit.setDividerPosition(0, .75);
+        }
+        else if(paneLayout == 3){
+            nestedSplit.setOrientation(Orientation.HORIZONTAL);
+            nestedSplit.getItems().clear();
+            nestedSplit.getItems().addAll(boardPane, listPane);
+            nestedSplit.setDividerPosition(0, .75);
+
+            mainSplit.setOrientation(Orientation.VERTICAL);
+            mainSplit.getItems().clear();
+            mainSplit.getItems().addAll(nestedSplit, infoPane);
+            mainSplit.setDividerPosition(0, .85);
+        }
 
         // Given the layout and screen size, we specify a starting size that has approx square cells.
         // MacBook Pro w Retina is 2880x1800 yet command below yields 1440x900... exactly half.
@@ -100,63 +174,30 @@ public class Main extends Application {
             case 3: width *= (mainSplit.getDividerPositions()[0] / nestedSplit.getDividerPositions()[0]); break;
         }
 
-        // Show the main Stage
-        mainStage.setTitle("Sudoku");
-        mainStage.setScene(new Scene(borderPane, width, height));
+        if (mainScene == null) {
+            mainScene = new Scene(borderPane, width, height);
+            mainStage.setTitle("Sudoku");
+            mainStage.setScene(mainScene);
+        }
+        else {
+            mainStage.setWidth(width);
+            mainStage.setHeight(height);
+        }
+
+        ToolBar tb = (ToolBar)borderPane.getTop();          // seems clumsy to ref the checkbox this way
+        CheckBox cb = (CheckBox)(tb.getItems().get(0));
+        if ( !cb.isSelected() ) {
+            if (paneLayout == 1 || paneLayout == 2) {
+                dividerPos = nestedSplit.getDividerPositions()[0];
+                nestedSplit.getItems().remove(infoPane);
+            }
+            else {
+                dividerPos = mainSplit.getDividerPositions()[0];
+                mainSplit.getItems().remove(infoPane);
+            }
+        }
+
         mainStage.show();
-    }
-
-
-    public void LayoutPanes() {
-
-        listPane = new StackPane();
-        listPane.setStyle("-fx-background-color: blue;");
-
-        infoPane = new StackPane();
-        infoPane.setStyle("-fx-background-color: green;");
-
-        BoardCanvas canvas = new BoardCanvas();
-        boardPane = new ResizableCanvasPane(canvas);
-        boardPane.setStyle("-fx-background-color: #FFFFFF;");
-        canvas.widthProperty().bind(boardPane.widthProperty());
-        canvas.heightProperty().bind(boardPane.heightProperty());
-
-        if(paneLayout == 1) {
-            // nested SplitPane that will go in the main SplitPane
-            nestedSplit = new SplitPane();
-            nestedSplit.setOrientation(Orientation.VERTICAL);
-            nestedSplit.getItems().addAll(listPane, infoPane);
-            nestedSplit.setDividerPosition(0,.50);
-
-            // main SplitPain (horizontal) that will go in the BorderPane center section
-            mainSplit = new SplitPane();
-            mainSplit.setOrientation(Orientation.HORIZONTAL);
-            mainSplit.getItems().addAll(boardPane, nestedSplit);   // add the nested SplitPane into the main SplitPane
-            mainSplit.setDividerPosition(0, .667);
-        }
-        else if(paneLayout == 2){
-            nestedSplit = new SplitPane();
-            nestedSplit.setOrientation(Orientation.VERTICAL);
-            nestedSplit.getItems().addAll(boardPane, infoPane);
-            nestedSplit.setDividerPosition(0, .85);
-
-            mainSplit = new SplitPane();
-            mainSplit.setOrientation(Orientation.HORIZONTAL);
-            mainSplit.getItems().addAll(nestedSplit, listPane);
-            mainSplit.setDividerPosition(0, .75);
-        }
-        else if(paneLayout == 3){
-            nestedSplit = new SplitPane();
-            nestedSplit.setOrientation(Orientation.HORIZONTAL);
-            nestedSplit.getItems().addAll(boardPane, listPane);
-            nestedSplit.setDividerPosition(0, .75);
-
-            mainSplit = new SplitPane();
-            mainSplit.setOrientation(Orientation.VERTICAL);
-            mainSplit.getItems().addAll(nestedSplit, infoPane);
-            mainSplit.setDividerPosition(0, .85);
-        }
-
     }
 
 
