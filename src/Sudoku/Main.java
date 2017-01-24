@@ -26,10 +26,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ToolBar;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
@@ -51,7 +48,7 @@ public class Main extends Application {
     private StackPane  infoPane;
     private BoardPane  boardPane;
 
-    private double dividerPos;          // retains divider position when infoPane toggled off
+
     private int paneLayout = 3;         // eventually pull from retained user settings
 
 
@@ -77,10 +74,7 @@ public class Main extends Application {
 
             @Override
             public void handle(ActionEvent t) {
-                paneLayout += 1;
-                if (paneLayout > 3)
-                    paneLayout = 1;
-                System.out.println("Layout button clicked: " + paneLayout);
+                paneLayout = paneLayout % 3 + 1;    // cycles values 1-3 endlessly
                 LayoutPanes();
             }
         });
@@ -92,31 +86,22 @@ public class Main extends Application {
             @Override
             public void handle(ActionEvent t) {
                 if (infoButton.getText() == "Hide Info") {
-                    if (paneLayout == 1 || paneLayout == 2) {
-                        dividerPos = nestedSplit.getDividerPositions()[0];
+                    if (paneLayout == 1 || paneLayout == 2)
                         nestedSplit.getItems().remove(infoPane);
-                    }
-                    else {
-                        dividerPos = mainSplit.getDividerPositions()[0];
+                    else
                         mainSplit.getItems().remove(infoPane);
-                    }
                     infoButton.setText("Show Info");
                 }
                 else {
-                    if (paneLayout == 1 || paneLayout == 2) {
+                    if (paneLayout == 1 || paneLayout == 2)
                         nestedSplit.getItems().add(infoPane);
-                        nestedSplit.setDividerPosition(0, dividerPos);
-                    }
-                    else {
+                    else
                         mainSplit.getItems().add(infoPane);
-                        mainSplit.setDividerPosition(0, dividerPos);
-                    }
                     infoButton.setText("Hide Info");
                 }
-                System.out.println("Info button clicked: " + infoButton.getText());
+                LayoutPanes();  // will resize to 'square' the cells
             }
         });
-
 
         // create the BorderPane with a toolbar and statusbar
         borderPane = new BorderPane();
@@ -128,14 +113,12 @@ public class Main extends Application {
         borderPane.setCenter(mainSplit);
         borderPane.setBottom(statusBar);
 
-
         // create the mouse event handler that displays events on the statusbar
         borderPane.addEventFilter(MouseEvent.ANY, new EventHandler<MouseEvent>() {
             public void handle(final MouseEvent e) {
                 statusBar.setText("Event: " + e.getEventType() + "  X: " + e.getX() + "  Y:" + e.getY());
             }
         });
-
 
         mainStage = primaryStage;
         LayoutPanes();
@@ -177,22 +160,39 @@ public class Main extends Application {
             mainSplit.setDividerPosition(0, .85);
         }
 
+        ToolBar tb = (ToolBar) borderPane.getTop();          // seems clumsy to ref the checkbox this way
+        Button ib = (Button)(tb.getItems().get(1));
+        boolean infoPaneRemoved = ib.getText() == "Show Info";
+
         // Given the layout and screen size, we specify a starting size that has approx square cells.
         // MacBook Pro w Retina is 2880x1800 yet command below yields 1440x900... exactly half.
         // Note:   JavaFX 8 introduces automatic coordinate scaling for Mac "Retina" HiDPI mode.
         //         Because retina displays are twice the resolution of non-retina, a scale factor of 2 is used.
         double height = Screen.getPrimary().getBounds().getMaxY() * .80; // initial Scene height is 80% of max
-        double width = height;  // Make the cells ~square based on initial divider positions.
+        double width = height;   // Make the cells ~square based on initial divider positions.
         switch (paneLayout) {    // Note: JavaFX treats the aspect ratio == 1 so we don't need to worry about that.
             case 1:
                 width *= (1.0 / mainSplit.getDividerPositions()[0]);
                 break;
             case 2:
-                width *= (nestedSplit.getDividerPositions()[0] / mainSplit.getDividerPositions()[0]);
+                if (infoPaneRemoved)
+                    width *= (1.0 / mainSplit.getDividerPositions()[0]);
+                else
+                    width *= (nestedSplit.getDividerPositions()[0] / mainSplit.getDividerPositions()[0]);
                 break;
             case 3:
-                width *= (mainSplit.getDividerPositions()[0] / nestedSplit.getDividerPositions()[0]);
+                if (infoPaneRemoved)
+                    width *= (1.0 / nestedSplit.getDividerPositions()[0]);
+                else
+                    width *= (mainSplit.getDividerPositions()[0] / nestedSplit.getDividerPositions()[0]);
                 break;
+        }
+
+        if (infoPaneRemoved) {
+            if (paneLayout == 1 || paneLayout == 2)
+                nestedSplit.getItems().remove(infoPane);
+            else
+                mainSplit.getItems().remove(infoPane);
         }
 
         if (mainScene == null) {
@@ -204,21 +204,10 @@ public class Main extends Application {
             mainStage.setHeight(height);
         }
 
-        ToolBar tb = (ToolBar) borderPane.getTop();          // seems clumsy to ref the checkbox this way
-        Button ib = (Button)(tb.getItems().get(1));
-        if (ib.getText() == "Show Info") {
-            if (paneLayout == 1 || paneLayout == 2) {
-                dividerPos = nestedSplit.getDividerPositions()[0];
-                nestedSplit.getItems().remove(infoPane);
-            } else {
-                dividerPos = mainSplit.getDividerPositions()[0];
-                mainSplit.getItems().remove(infoPane);
-            }
-        }
-
         mainStage.show();
     }
 }   // public class Main
+
 
 
 /*
