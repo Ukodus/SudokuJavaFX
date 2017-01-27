@@ -58,6 +58,7 @@ public class Main extends Application {
 
     private int paneLayout = 3;         // eventually pull from retained user settings
     private ArrayList<String> Puzzles;
+    private int selectedCell = -1;
 
 
     @Override
@@ -118,12 +119,40 @@ public class Main extends Application {
         borderPane.setCenter(mainSplit);
         borderPane.setBottom(statusBar);
 
-        // create the mouse event handler that displays events on the statusbar
-        borderPane.addEventFilter(MouseEvent.ANY, new EventHandler<MouseEvent>() {
+        // create the mouse event handlers
+        boardPane.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
             public void handle(final MouseEvent e) {
-                statusBar.setText("Event: " + e.getEventType() + "  X: " + e.getX() + "  Y:" + e.getY());
+                double width  = boardPane.getWidth();
+                double height = boardPane.getHeight();
+                double cellWidth  = width / 9.0;
+                double cellHeight = height / 9.0;
+                int row = (int)(e.getY() / cellHeight);
+                int col = (int)(e.getX() / cellWidth);
+                statusBar.setText("Event: " + e.getEventType() + "  boardPane width: " + width + "  height: " + height + "  X: " + e.getX() + "  Y:" + e.getY() + "  Row: " + row + "  Col: " + col);
             }
         });
+
+        boardPane.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            public void handle(final MouseEvent e) {
+                double width  = boardPane.getWidth();
+                double height = boardPane.getHeight();
+                double cellWidth  = width / 9.0;
+                double cellHeight = height / 9.0;
+                int row  = (int)(e.getY() / cellHeight);
+                int col  = (int)(e.getX() / cellWidth);
+                int cell = (row * 9 ) + col;
+
+                if (selectedCell >= 0)              // if a cell is already selected
+                    boardPane.layoutChildren();     //   then 'unselect' it visually
+                if (cell != selectedCell) {
+                    selectedCell = cell;
+                    boardPane.highlightCell(selectedCell);
+                } else
+                    selectedCell = -1;
+
+            }
+        });
+
 
         mainStage = primaryStage;
         LayoutPanes();
@@ -301,6 +330,10 @@ class BoardPane extends Pane{
         canvas.setLayoutY(top);
         canvas.draw();
     }
+
+    public void highlightCell(int cell) {
+        canvas.highlightCell(cell);
+    }
 }
 
 
@@ -361,6 +394,22 @@ class BoardCanvas extends Canvas {
         gc.strokeLine(0, y, boardWidth, y);
         y += cellHeight;
         gc.strokeLine(0, y, boardWidth, y);
+    }
+
+    public void highlightCell(int cell) {
+
+        double cellWidth  = getWidth() / 9.0;
+        double cellHeight = getHeight() / 9.0;
+        int row = cell / 9;
+        int col = cell % 9;
+        double top = cellHeight * row;
+        double left = cellWidth * col;
+
+        GraphicsContext gc = getGraphicsContext2D();
+        gc.setStroke( Color.RED );
+        gc.setLineWidth(3.0);
+        gc.strokeRect(left, top, cellWidth, cellHeight);
+
     }
 
     // these may be used internally by the base class Canvas, set as precaution.  Needed?  Are there more?
