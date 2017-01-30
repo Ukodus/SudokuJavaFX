@@ -21,6 +21,7 @@ package Sudoku;
 */
 
 import javafx.application.Application;
+import javafx.geometry.Bounds;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -33,6 +34,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.Scene;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -397,6 +401,34 @@ class BoardCanvas extends Canvas {
             gc.setLineWidth(3.0);
             gc.strokeRect(left, top, cellWidth, cellHeight);
         }
+
+
+        // draw an "8" in the middle cell... figuring out font metrics
+        boolean possiblesShown = true;
+        double size = Math.min(cellWidth,cellHeight) / 1.5;
+        Text t = new Text("8");
+        t.setFont(Font.font("SansSerif", FontWeight.BOLD, size));
+        Bounds b = t.getBoundsInLocal();
+        x = (4.5 * cellWidth) - (b.getWidth() / 2.0);
+        y = (4.5 * cellHeight) + (b.getHeight() / 3.0);
+
+        gc.setFont(t.getFont());
+        gc.setFill( Color.BLACK );
+        gc.fillText(t.getText(), x, y);
+
+        // draw sample list of possible values at the top of the middle cell
+        size = Math.min(cellWidth,cellHeight) / 6.0;
+        if (possiblesShown && size >= 8.0) {
+            t = new Text("123456789");
+            t.setFont(Font.font("SansSerif", FontWeight.NORMAL, size));
+            b = t.getBoundsInLocal();
+            x = (4.5 * cellWidth) - (b.getWidth() / 2.0);
+            y = (4.0 * cellHeight) + b.getHeight();
+            gc.setFont(t.getFont());
+            gc.setFill(Color.BLACK);
+            gc.fillText(t.getText(), x, y);
+        }
+
     }
 
     public void selectCell(MouseEvent e) {
