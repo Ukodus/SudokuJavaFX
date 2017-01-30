@@ -62,12 +62,11 @@ public class Main extends Application {
 
     private int paneLayout = 3;         // eventually pull from retained user settings
     private ArrayList<String> Puzzles;
+    public  Position DisplayedPosition;
 
 
     @Override
     public void start(Stage primaryStage) {
-
-        InitializePuzzlesList();
 
         // one-time creation of panes
         listPane    = new StackPane();
@@ -151,6 +150,11 @@ public class Main extends Application {
                 statusBar.setText("Event: " + e.getEventType() + "  infoPane  X: " + e.getX() + "  Y:" + e.getY());
             }
         });
+
+
+        InitializePuzzlesList();
+        SudokuPuzzle puzzle = new SudokuPuzzle(Puzzles.get(0));     // pick the first puzzle in our list
+        boardPane.canvas.displayedPosition = puzzle.lastPosition;   //   and the last position set
 
 
         mainStage = primaryStage;
@@ -331,8 +335,9 @@ class BoardPane extends Pane{
 }
 
 class BoardCanvas extends Canvas {
-
-    public int selectedCell = -1;
+    public int selectedCell = -1;   // -1 = no cell selected
+    public Position displayedPosition = null;
+    public boolean possiblesShown = true;
 
     public void draw() {
         double boardWidth  = getWidth();
@@ -402,33 +407,44 @@ class BoardCanvas extends Canvas {
             gc.strokeRect(left, top, cellWidth, cellHeight);
         }
 
-
-        // draw an "8" in the middle cell... figuring out font metrics
-        boolean possiblesShown = true;
-        double size = Math.min(cellWidth,cellHeight) / 1.5;
-        Text t = new Text("8");
-        t.setFont(Font.font("SansSerif", FontWeight.BOLD, size));
-        Bounds b = t.getBoundsInLocal();
-        x = (4.5 * cellWidth) - (b.getWidth() / 2.0);
-        y = (4.5 * cellHeight) + (b.getHeight() / 3.0);
-
-        gc.setFont(t.getFont());
-        gc.setFill( Color.BLACK );
-        gc.fillText(t.getText(), x, y);
-
-        // draw sample list of possible values at the top of the middle cell
-        size = Math.min(cellWidth,cellHeight) / 6.0;
-        if (possiblesShown && size >= 8.0) {
-            t = new Text("123456789");
-            t.setFont(Font.font("SansSerif", FontWeight.NORMAL, size));
-            b = t.getBoundsInLocal();
-            x = (4.5 * cellWidth) - (b.getWidth() / 2.0);
-            y = (4.0 * cellHeight) + b.getHeight();
+        // display the square values for the selected position
+        if (displayedPosition != null) {
+            double size = Math.min(cellWidth,cellHeight) / 1.5;
+            Text t = new Text("8");
+            t.setFont(Font.font("SansSerif", FontWeight.BOLD, size));
+            Bounds b = t.getBoundsInLocal();
             gc.setFont(t.getFont());
-            gc.setFill(Color.BLACK);
-            gc.fillText(t.getText(), x, y);
-        }
+            gc.setFill( Color.BLACK );
 
+            for(square s : displayedPosition.squares) {
+                if (s.value != 0) {
+                    x = (((double)s.column + 0.5) * cellWidth) - (b.getWidth() / 2.0);
+                    y = (((double)s.row + 0.5) * cellHeight) + (b.getHeight() / 3.0);
+                    t.setText(s.display);
+                    gc.fillText(t.getText(), x, y);
+                }
+            }
+            // display the possible values on blank squares
+            if (possiblesShown) {
+                size = Math.min(cellWidth, cellHeight) / 6.0;
+                if (size >= 8.0) {
+                    t = new Text("123456789");
+                    t.setFont(Font.font("SansSerif", FontWeight.NORMAL, size));
+                    b = t.getBoundsInLocal();
+                    gc.setFont(t.getFont());
+                    gc.setFill(Color.DIMGRAY);
+
+                    for(square s : displayedPosition.squares) {
+                        if (s.value == 0) {
+                            x = (((double)s.column + 0.5) * cellWidth) - (b.getWidth() / 2.0);
+                            y = ( ((double)s.row * cellHeight) + b.getHeight() );
+                            t.setText(s.possible.replace(" ", ""));
+                            gc.fillText(t.getText(), x, y);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void selectCell(MouseEvent e) {
@@ -454,3 +470,147 @@ class BoardCanvas extends Canvas {
     public double prefHeight(double width) { return getHeight(); }
 }
 
+
+
+/*
+------------------------------------------------------------------------------------------------------------------------
+    Everything below is purely computational modelling of a Sudoku puzzle.  Solving a Sudoku puzzle is a process of
+    eliminating possible values from the squares until there is only one possible value for each square.  A "move" is
+    when a square is filled in with a value which results in a new "position".  A 9x9 Sudoku will therefore have, at
+    most, 81 moves and resulting positions.  When a move is made, the value is eliminated from the possible values in
+    neighboring squares.  The position is then analyzed to see if additional possible values can be eliminated based on
+    more complex logic.  Empty squares with only one possible value create the hint-list of good moves.
+------------------------------------------------------------------------------------------------------------------------
+*/
+
+class SudokuPuzzle {
+    public String     puzzle;               // starting 81-char String of numerals 0-9 where 0 is an empty square
+    public Position[] positions;
+    public Position   lastPosition;
+
+    public SudokuPuzzle(String puzzle) {
+        positions = new Position[81];       // one-time allocation of all positions, so no realloc or garbage cleanup
+        for(int p=0; p<81; p++)
+            positions[p] = new Position(p);
+
+        this.puzzle = puzzle;
+        //System.out.println("Puzzle: " + this.puzzle);
+
+        int moveNumber = -1;
+        for(int sqr=0; sqr<81; sqr++) {
+            int value = Integer.parseInt(puzzle.substring(sqr,sqr+1));
+            if (value > 0) {
+                moveNumber++;
+                if (moveNumber > 0) {
+                    for (int s=0; s<81; s++)
+                        if (lastPosition.squares[s].value != 0)
+                            positions[moveNumber].setMove(s, lastPosition.squares[s].value);
+                }
+                positions[moveNumber].setMove(sqr, value);
+                lastPosition = positions[moveNumber];
+                //System.out.println("moveNumber: "+lastPosition.moveNumber + "  sqr: " + lastPosition.squareNumber + "  value: "+lastPosition.squareValue);
+            }
+        }
+    }
+
+}
+
+class Position {
+    public int moveNumber;
+    public int squareNumber;
+    public int squareValue;
+    public square[] squares;
+
+    public Position(int move) {
+        moveNumber   = move;
+        squareNumber = -1;
+        squareValue  = -1;
+        squares = new square[81];
+
+        for(int s=0; s<81; s++)
+            squares[s] = new square(s);
+
+        for(int s=0; s<81; s++)
+            squares[s].setSiblings(squares);
+    }
+
+    public void setMove(int square, int value) {
+        squareNumber = square;
+        squareValue  = value;
+        squares[square].setValue(value);
+    }
+}
+
+
+class square {
+    public int       index;     // 0 - 80, index into squares[]
+    public int       row;       // 0 - 8
+    public int       column;    // 0 - 8
+    public int       value;     // 0 - 9, 0 -> no value
+    public String    display;   // "0" - "9", string representation of value
+    public int       possCnt;   // 0 - 9 count of possible values
+    public String    possible;  // "123456789" impossible values are blanked
+    public boolean[] possibool; // indecies 1-9 are true when value possible
+    public square[]  siblings;  // squares in the same row, column, box
+
+    public square(int s) {
+        // constructor does one-time initializations
+        index     = s;
+        row       = index / 9;
+        column    = index % 9;
+        siblings  = new square[20];
+        possibool = new boolean[10];    // [0] unused
+        reset();
+    }
+
+    public final void reset() {
+        value    = 0;
+        display  = "0";
+        possible = "123456789";
+        possCnt  = 9;
+        for(int i=1; i<10; i++)
+            possibool[i] = true;
+    }
+
+    public void setSiblings(square[] sqr) {
+        int sib = 0;                    // index into siblings[]
+        int idx = row * 9;              // index of first square in row
+        for(int i=0; i<9; i++, idx++)
+            if(idx != index)
+                siblings[sib++] = sqr[idx];
+
+        idx = column;                   // index of this column on row 0
+        for(int i=0; i<9; i++, idx+=9)
+            if(idx != index)
+                siblings[sib++] = sqr[idx];
+
+        int boxRow = (row / 3) * 3;
+        int boxCol = (column / 3) * 3;
+        for(int r = boxRow; r<boxRow+3; r++)
+            for(int c = boxCol; c<boxCol+3; c++)
+                if(r != row && c != column)
+                    siblings[sib++] = sqr[(r * 9) + c];
+    }
+
+    public void setValue(int v) {
+        value    = v;
+        display  = String.valueOf(v);
+        possible = "         ";
+        possCnt  = 0;
+        for(int i=1; i<10; i++)
+            possibool[i] = false;
+
+        // value just set is now impossible for the siblings, so...
+        for(int i=0; i<20; i++)
+            siblings[i].setImpossible(value, display);
+    }
+
+    private void setImpossible(int v, String c) {
+        if( possibool[v] ) {    // if because it might already be impossible
+            possible = possible.replace(c, " ");
+            possibool[v] = false;
+            possCnt--;
+        }
+    }
+
+}
