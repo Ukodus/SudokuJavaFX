@@ -48,6 +48,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 
+enum Mode {
+    USER,
+    CREATE,
+    NEW_PUZZLE,
+    ANALYZE_POSITION,
+    ANALYZE_PUZZLE
+}
+
+
 
 public class Main extends Application {
 
@@ -59,10 +68,10 @@ public class Main extends Application {
     private StackPane  listPane;
     private StackPane  infoPane;
     private BoardPane  boardPane;
+    private Mode       mode = Mode.USER;
 
     private int paneLayout = 3;         // eventually pull from retained user settings
     private ArrayList<String> Puzzles;
-    public  Position DisplayedPosition;
 
 
     @Override
@@ -111,11 +120,30 @@ public class Main extends Application {
             }
         });
 
+        ToggleButton createButton = new ToggleButton("Create");
+        createButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                if (createButton.getText() == "Create") {
+                    mode = Mode.CREATE;
+                    createButton.setText("Finished");
+                    SudokuPuzzle puzzle = new SudokuPuzzle( "" );
+                    boardPane.canvas.displayedPosition = puzzle.lastPosition;
+                }
+                else {
+                    mode = Mode.USER;
+                    createButton.setText("Create");
+                }
+                LayoutPanes();
+                //System.out.println("Mode: " + mode);
+            }
+        });
+
         // create the BorderPane with a toolbar and statusbar
         borderPane = new BorderPane();
         ToolBar toolbar = new ToolBar();
         toolbar.setPrefHeight(30.0);
-        toolbar.getItems().addAll(layoutButton, infoButton);
+        toolbar.getItems().addAll(layoutButton, infoButton, createButton);
         Label statusBar = new Label();
         borderPane.setTop(toolbar);
         borderPane.setCenter(mainSplit);
@@ -322,14 +350,16 @@ class BoardPane extends Pane{
 
     @Override
     protected void layoutChildren() {
-        final int top    = (int)snappedTopInset();
-        final int left   = (int)snappedLeftInset();
-        final int bottom = (int)snappedBottomInset();
-        final int right  = (int)snappedRightInset();
-        final int width  = (int)getWidth() - left - right;
-        final int height = (int)getHeight() - top - bottom;
-        canvas.setLayoutX(left);
-        canvas.setLayoutY(top);
+        //final int top    = (int)snappedTopInset();
+        //final int left   = (int)snappedLeftInset();
+        //final int bottom = (int)snappedBottomInset();
+        //final int right  = (int)snappedRightInset();
+        //final int width  = (int)getWidth() - left - right;
+        //final int height = (int)getHeight() - top - bottom;
+        //canvas.setLayoutX(left);
+        //canvas.setLayoutY(top);
+        canvas.setLayoutX((int)snappedLeftInset());
+        canvas.setLayoutY((int)snappedTopInset());
         canvas.draw();
     }
 }
@@ -489,16 +519,18 @@ class SudokuPuzzle {
     public Position   lastPosition;
 
     public SudokuPuzzle(String puzzle) {
+
+        // pad-right to 81 chars with zeros: pass in an empty string to for a clean new puzzle
+        this.puzzle = String.format("%1$-81s", puzzle).replace(' ','0');
+
         positions = new Position[81];       // one-time allocation of all positions, so no realloc or garbage cleanup
         for(int p=0; p<81; p++)
             positions[p] = new Position(p);
-
-        this.puzzle = puzzle;
-        //System.out.println("Puzzle: " + this.puzzle);
+        lastPosition = positions[0];
 
         int moveNumber = -1;
         for(int sqr=0; sqr<81; sqr++) {
-            int value = Integer.parseInt(puzzle.substring(sqr,sqr+1));
+            int value = Integer.parseInt(this.puzzle.substring(sqr,sqr+1));
             if (value > 0) {
                 moveNumber++;
                 if (moveNumber > 0) {
