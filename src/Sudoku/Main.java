@@ -196,37 +196,17 @@ public class Main extends Application {
                 // change the selected cell with the arrow keys
                 if(boardPane.canvas.selectedCell >= 0) {
                     if ( Arrays.asList(new KeyCode[]{KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT}).contains(e.getCode()) ) {
-                        System.out.println("Pressed KeyCode: " + e.getCode().toString() + "  Char: " + e.getCharacter());
-                        int newCell = boardPane.canvas.selectedCell;
-                        if (e.getCode() == KeyCode.UP) {
-                            newCell = ((boardPane.canvas.selectedCell + 72) % 81);
+                        switch (e.getCode()) {
+                            case UP:    boardPane.canvas.selectedCell  = ((boardPane.canvas.selectedCell + 72) % 81); break;
+                            case DOWN:  boardPane.canvas.selectedCell  = ((boardPane.canvas.selectedCell + 9) % 81); break;
+                            case LEFT:  boardPane.canvas.selectedCell += ((boardPane.canvas.selectedCell % 9) == 0  ? 8 : -1); break;
+                            case RIGHT: boardPane.canvas.selectedCell += ((boardPane.canvas.selectedCell % 9) == 8 ? -8 : 1); break;
                         }
-                        else if (e.getCode() == KeyCode.DOWN) {
-                            newCell = ((boardPane.canvas.selectedCell + 9) % 81);
-                        }
-                        else if (e.getCode() == KeyCode.LEFT) {
-                            if ( (newCell % 9) == 0 )
-                                newCell += 8;
-                            else
-                                newCell--;
-                        }
-                        else if  (e.getCode() == KeyCode.RIGHT) {
-                            if ( (newCell % 9) == 8 )
-                                newCell -= 8;
-                            else
-                                newCell++;
-
-                        }
-                        boardPane.canvas.selectedCell = 0;
-                        boardPane.canvas.draw();
-                        boardPane.canvas.selectedCell = newCell;
                         boardPane.canvas.draw();
                     }
                 }
             }
         });
-
-
 
 
         InitializePuzzlesList();
