@@ -28,6 +28,8 @@ import javafx.geometry.Orientation;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
@@ -178,6 +180,53 @@ public class Main extends Application {
                 statusBar.setText("Event: " + e.getEventType() + "  infoPane  X: " + e.getX() + "  Y:" + e.getY());
             }
         });
+
+        // create the KeyEvent handlers
+        borderPane.addEventFilter(KeyEvent.KEY_TYPED, new EventHandler<KeyEvent>() {
+            public void handle(final KeyEvent e) {
+                if(boardPane.canvas.selectedCell >= 0) {
+                    "1234567890 ".indexOf(e.getCharacter());
+                    System.out.println("Typed Index: " + "1234567890 ".indexOf(e.getCharacter()) + "  Char: " + e.getCharacter());
+                }
+            }
+        });
+
+        borderPane.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+            public void handle(final KeyEvent e) {
+                // change the selected cell with the arrow keys
+                if(boardPane.canvas.selectedCell >= 0) {
+                    if ( Arrays.asList(new KeyCode[]{KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT}).contains(e.getCode()) ) {
+                        System.out.println("Pressed KeyCode: " + e.getCode().toString() + "  Char: " + e.getCharacter());
+                        int newCell = boardPane.canvas.selectedCell;
+                        if (e.getCode() == KeyCode.UP) {
+                            newCell = ((boardPane.canvas.selectedCell + 72) % 81);
+                        }
+                        else if (e.getCode() == KeyCode.DOWN) {
+                            newCell = ((boardPane.canvas.selectedCell + 9) % 81);
+                        }
+                        else if (e.getCode() == KeyCode.LEFT) {
+                            if ( (newCell % 9) == 0 )
+                                newCell += 8;
+                            else
+                                newCell--;
+                        }
+                        else if  (e.getCode() == KeyCode.RIGHT) {
+                            if ( (newCell % 9) == 8 )
+                                newCell -= 8;
+                            else
+                                newCell++;
+
+                        }
+                        boardPane.canvas.selectedCell = 0;
+                        boardPane.canvas.draw();
+                        boardPane.canvas.selectedCell = newCell;
+                        boardPane.canvas.draw();
+                    }
+                }
+            }
+        });
+
+
 
 
         InitializePuzzlesList();
@@ -468,7 +517,7 @@ class BoardCanvas extends Canvas {
                         if (s.value == 0) {
                             x = (((double)s.column + 0.5) * cellWidth) - (b.getWidth() / 2.0);
                             y = ( ((double)s.row * cellHeight) + b.getHeight() );
-                            t.setText(s.possible.replace(" ", ""));
+                            t.setText(s.possible);
                             gc.fillText(t.getText(), x, y);
                         }
                     }
@@ -573,7 +622,6 @@ class Position {
     }
 }
 
-
 class square {
     public int       index;     // 0 - 80, index into squares[]
     public int       row;       // 0 - 8
@@ -639,7 +687,7 @@ class square {
 
     private void setImpossible(int v, String c) {
         if( possibool[v] ) {    // if because it might already be impossible
-            possible = possible.replace(c, " ");
+            possible = possible.replace(c, "");
             possibool[v] = false;
             possCnt--;
         }
