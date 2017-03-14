@@ -155,6 +155,10 @@ public class Main extends Application {
         boardPane.canvas.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             public void handle(final MouseEvent e) {
                 boardPane.canvas.selectCell(e);
+                if (boardPane.canvas.selectedCell == -1)
+                    borderPane.getTop().requestFocus();
+                else
+                    boardPane.requestFocus();
             }
         });
 
@@ -181,12 +185,15 @@ public class Main extends Application {
             }
         });
 
+
         // create the KeyEvent handlers
         borderPane.addEventFilter(KeyEvent.KEY_TYPED, new EventHandler<KeyEvent>() {
             public void handle(final KeyEvent e) {
+                System.out.println("borderPane event called");
                 if(boardPane.canvas.selectedCell >= 0) {
-                    "1234567890 ".indexOf(e.getCharacter());
+                    //"1234567890 ".indexOf(e.getCharacter());
                     System.out.println("Typed Index: " + "1234567890 ".indexOf(e.getCharacter()) + "  Char: " + e.getCharacter());
+                    e.consume();
                 }
             }
         });
@@ -202,6 +209,7 @@ public class Main extends Application {
                             case LEFT:  boardPane.canvas.selectedCell += ((boardPane.canvas.selectedCell % 9) == 0  ? 8 : -1); break;
                             case RIGHT: boardPane.canvas.selectedCell += ((boardPane.canvas.selectedCell % 9) == 8 ? -8 : 1); break;
                         }
+                        e.consume();
                         boardPane.canvas.draw();
                     }
                 }
